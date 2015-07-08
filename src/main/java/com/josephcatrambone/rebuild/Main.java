@@ -53,7 +53,7 @@ public class Main extends Application {
 	public List <Sector> sectors;
 
 	// Editor
-	public static enum EditorOperation {SELECT, PLACE_VERT, SPLIT_WALL, REMOVE_VERT, GRAB_VERT};
+	public static enum EditorOperation {SELECT, PLACE_VERT, SPLIT_WALL, REMOVE_VERT, GRAB_VERT, UNDO_VERT};
 	private Map <KeyCode, EditorOperation> keybindings; // 'a' -> Jump
 	private GraphicsContext gc; // Yeah, this is lazy.  Whatever.
 	private Point2D previousPoint = null;
@@ -68,6 +68,8 @@ public class Main extends Application {
 
 		keybindings = new HashMap<>();
 		keybindings.put(KeyCode.SPACE, EditorOperation.PLACE_VERT);
+		keybindings.put(KeyCode.Z, EditorOperation.UNDO_VERT);
+		keybindings.put(KeyCode.X, EditorOperation.REMOVE_VERT);
 	}
 
 	@Override
@@ -93,6 +95,8 @@ public class Main extends Application {
 					case PLACE_VERT:
 						addVertex(previousMouse.getX(), previousMouse.getY());
 						break;
+					case UNDO_VERT:
+						cancelVertex();
 					default:
 						break;
 				}
@@ -208,6 +212,37 @@ public class Main extends Application {
 				walls.add(wall);
 				previousPoint = null;
 			}
+		}
+	}
+
+	/*** cancelVertex
+	 * Remove the last vertex placed, along with all corresponding walls.
+	 * Reset the previousVertex to one of the walls linking into it.
+	 */
+	public void cancelVertex() {
+		if(previousPoint == null) { return; }
+
+		// Select the walls that we need to destroy.
+		List <Wall> candidateWalls = new ArrayList<>();
+		for(Wall w : walls) {
+			if(previousPoint == w.b) {
+				candidateWalls.add(w);
+			}
+		}
+		if(candidateWalls.size() > 0) { // If we have a few candidates, remove the last one.
+			Wall last = candidateWalls.get(candidateWalls.size() - 1);
+			previousPoint = last.a;
+			walls.remove(last);
+			// TODO: Remove from all sectors.
+			// If we have only one wall, remove the vertex, too.
+			if(candidateWalls.size() == 1) {
+				vertices.remove(last.b);
+			}
+		} else { // Since there are no candidates, just remove the point.
+			// Don't worry about the case where there are walls STARTING from the point,
+			// this can't happen because the graph is planar and a point would have to loop back upon itself.
+			vertices.remove(previousPoint);
+			previousPoint = null;
 		}
 	}
 
