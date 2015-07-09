@@ -1,14 +1,11 @@
 package com.josephcatrambone.rebuild;
 
-import com.sun.javafx.geom.Line2D;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -21,17 +18,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.transform.Affine;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.util.Pair;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.Map;
-import java.util.Random;
 
 
 public class Main extends Application {
@@ -45,6 +34,7 @@ public class Main extends Application {
 	final Color WALLS = Color.WHITE;
 	final Color PORTALS = Color.PINK;
 	final int VERT_SIZE = 4;
+	final double VERTEX_SELECTION_THRESHOLD = VERT_SIZE*4;
 
 	// Map data
 	public Point2D mapSize = new Point2D(10000, 10000);
@@ -53,11 +43,12 @@ public class Main extends Application {
 	public List <Sector> sectors;
 
 	// Editor
-	public static enum EditorOperation {SELECT, PLACE_VERT, SPLIT_WALL, REMOVE_VERT, GRAB_VERT, UNDO_VERT};
+	public static enum EditorOperation {SELECT, PLACE_VERT, SPLIT_WALL, REMOVE_VERT, DRAG_VERT, UNDO_VERT, QUIT};
 	private Map <KeyCode, EditorOperation> keybindings; // 'a' -> Jump
 	private GraphicsContext gc; // Yeah, this is lazy.  Whatever.
 	private Point2D previousPoint = null;
 	private Point2D previousMouse = null;
+	private Point2D draggedVertex = null;
 	private Point2D mouseDelta = null;
 	private int gridSnap = 10;
 
@@ -67,6 +58,7 @@ public class Main extends Application {
 		sectors = new ArrayList<>();
 
 		keybindings = new HashMap<>();
+		keybindings.put(KeyCode.Q, EditorOperation.QUIT);
 		keybindings.put(KeyCode.SPACE, EditorOperation.PLACE_VERT);
 		keybindings.put(KeyCode.Z, EditorOperation.UNDO_VERT);
 		keybindings.put(KeyCode.X, EditorOperation.REMOVE_VERT);
@@ -95,8 +87,18 @@ public class Main extends Application {
 					case PLACE_VERT:
 						addVertex(previousMouse.getX(), previousMouse.getY());
 						break;
+					case DRAG_VERT:
+
+						break;
 					case UNDO_VERT:
 						cancelVertex();
+						break;
+					case REMOVE_VERT:
+						removeVertex(previousMouse.getX(), previousMouse.getY());
+						break;
+					case QUIT:
+						System.exit(0); // TODO: Check unsaved map.
+						break;
 					default:
 						break;
 				}
@@ -225,7 +227,7 @@ public class Main extends Application {
 		// Select the walls that we need to destroy.
 		List <Wall> candidateWalls = new ArrayList<>();
 		for(Wall w : walls) {
-			if(previousPoint == w.b) {
+			if(previousPoint == w.b) { // We want exact match.  Use == instead of equals.
 				candidateWalls.add(w);
 			}
 		}
@@ -243,6 +245,89 @@ public class Main extends Application {
 			// this can't happen because the graph is planar and a point would have to loop back upon itself.
 			vertices.remove(previousPoint);
 			previousPoint = null;
+		}
+	}
+
+	public void removeVertex(double x, double y) {
+		Point2D target = findNearestVertex(x, y, VERTEX_SELECTION_THRESHOLD);
+
+		if(target == null) {
+			System.out.println("DEBUG: No point selected.");
+			return;
+		}
+
+		int targetIndex = vertices.indexOf(target);
+
+
+		// Select the walls this is going to impact.
+		// There are two styles we can handle:
+		//  \b               a/
+		// -ba-----b   a-----ba--
+		// /b                a\
+		List <Wall> aMatch = new ArrayList<>(); // Walls whose start changes.
+		List <Wall> bMatch = new ArrayList<>(); // Walls whose end changes.
+		for(Wall w : walls) {
+			if(w.a == target) {
+				aMatch.add(w);
+			} else if(w.b == target) {
+				bMatch.add(w);
+			} else {
+				// No match
+			}
+		}
+
+		// TODO: We assume that there are no free-standing walls and that the place operation always finishes.
+		// We need to handle the cases where the user starts placing a wall then bails out.
+
+		// If we have one source and multiple-targets (fan out), we're okay.
+		if(aMatch.size() == 1 && bMatch.size() > 0) {
+			// Connect each wall's b-side to a's b-side, then remove a.
+			for(Wall w : bMatch) {
+				w.b = aMatch.get(0).b;
+			}
+			walls.remove(aMatch.get(0));
+			vertices.remove(targetIndex);
+		} else if(aMatch.size() > 0 && bMatch.size() == 1) { // Fan in
+			for(Wall w : aMatch) {
+				w.a = bMatch.get(0).a;
+			}
+			walls.remove(bMatch.get(0));
+			vertices.remove(targetIndex);
+		} else if(aMatch.size() < 1) { // This point has nothing coming in.
+
+		} else { // We have multiple matches of each kind or a degenerate problem.
+			/*
+			for(Wall w : aMatch) {
+				if(w.a == w.b) {
+
+				}
+			}
+			*/
+			System.err.println("Can't delete point.  Many to many problem.");
+		}
+	}
+
+	public Point2D findNearestVertex(double x, double y, double selectionThreshold) {
+		// Remap x, y
+		x = unprojectX(x);
+		y = unprojectY(y);
+
+		Point2D pt = new Point2D(x, y);
+		double bestDistance = Double.MAX_VALUE;
+		Point2D bestCandidate = null;
+
+		for(Point2D candidate : vertices) {
+			double dist = pt.distance(candidate);
+			if(dist < bestDistance) {
+				bestDistance = dist;
+				bestCandidate = candidate;
+			}
+		}
+
+		if(bestDistance < selectionThreshold) {
+			return bestCandidate;
+		} else {
+			return null;
 		}
 	}
 
@@ -282,6 +367,19 @@ public class Main extends Application {
 		for(Point2D v : vertices) {
 			gc.strokeRect(v.getX()-VERT_SIZE, v.getY()-VERT_SIZE, 2*VERT_SIZE, 2*VERT_SIZE);
 		}
+	}
+
+	/*** loadMap
+	 * Load all the vertex/wall/sector data.
+	 * @param name
+	 * @return Returns true on successful load.
+	 */
+	public boolean loadMap(String name) {
+		return false;
+	}
+
+	public boolean saveMap(String name) {
+		return false;
 	}
 
 	public static void main(String[] args) {
