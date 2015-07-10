@@ -1,6 +1,9 @@
 package com.josephcatrambone.rebuild;
 
+import com.sun.javafx.geom.Line2D;
 import javafx.geometry.Point2D;
+
+import java.util.List;
 
 /**
  * Created by josephcatrambone on 7/6/15.
