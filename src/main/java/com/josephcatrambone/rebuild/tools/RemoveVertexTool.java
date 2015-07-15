@@ -1,5 +1,6 @@
 package com.josephcatrambone.rebuild.tools;
 
+import com.josephcatrambone.rebuild.Editor;
 import com.josephcatrambone.rebuild.Map;
 import com.josephcatrambone.rebuild.Wall;
 import javafx.geometry.Point2D;
@@ -11,7 +12,7 @@ import java.util.List;
  * Created by josephcatrambone on 7/9/15.
  */
 public class RemoveVertexTool implements Tool {
-	public double VERTEX_SELECTION_THRESHOLD;
+	public double VERTEX_SELECTION_THRESHOLD = 10;
 
 	public String getName() {
 		return "Remove Vertex Tool";

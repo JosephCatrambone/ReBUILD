@@ -59,11 +59,35 @@ public class Editor extends Canvas  {
 	}
 
 	private double unprojectX(double x) {
-		return x - this.getGraphicsContext2D().getTransform().getTx();
+		//Untransform x
+		try {
+			x = this.getGraphicsContext2D().getTransform().inverseTransform(x, 0).getX();
+		} catch(javafx.scene.transform.NonInvertibleTransformException nite) {
+			x -= this.getGraphicsContext2D().getTransform().getTx();
+		}
+
+		// Snap to grid.
+		if(gridSnap > 1) {
+			x -= (Math.round(x) % gridSnap);
+		}
+
+		return x;
 	}
 
 	private double unprojectY(double y) {
-		return y - this.getGraphicsContext2D().getTransform().getTy();
+		// Invert transform
+		try {
+			y = this.getGraphicsContext2D().getTransform().inverseTransform(0, y).getY();
+		} catch(javafx.scene.transform.NonInvertibleTransformException nite) {
+			y -= this.getGraphicsContext2D().getTransform().getTy();
+		}
+
+		// Snap to grid.
+		if(gridSnap > 1) {
+			y -= (Math.round(y) % gridSnap);
+		}
+
+		return y;
 	}
 
 	public void drawGrid() {
