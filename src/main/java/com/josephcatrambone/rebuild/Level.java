@@ -7,7 +7,7 @@ public class Level {
 	}
 
 	class Sector {
-		ArrayList <Vector3> walls;
+		ArrayList <Vector> walls;
 		ArrayList <Sector> neighbors; // Null = Solid wall.
 	}
 }
