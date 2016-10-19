@@ -1,7 +1,10 @@
 package com.josephcatrambone.rebuild;
 
+import org.lwjgl.BufferUtils;
+import org.lwjgl.glfw.GLFWCursorPosCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 
+import java.nio.DoubleBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -13,6 +16,10 @@ public class InputManager {
 	HashMap <Integer, LinkedList<Runnable>> keyUpBindings; // Called on release.
 	HashSet <Integer> keyPressed; // Updated once every frame.
 	HashSet <Integer> keyReleased;
+
+	// Wrappers for getting mouse position.
+	DoubleBuffer b1 = BufferUtils.createDoubleBuffer(1);
+	DoubleBuffer b2 = BufferUtils.createDoubleBuffer(1);
 
 	public InputManager() {
 		keyDownBindings = new HashMap<>();
@@ -28,6 +35,13 @@ public class InputManager {
 		};
 	}
 
+	public GLFWCursorPosCallbackI getMousePositionCallback() {
+		final InputManager im = this;
+		return (long window, double xOffset, double yOffset) -> {
+			im.handleCursorPositionEvent(xOffset, yOffset);
+		};
+	}
+
 	public void handleKeyEvent(int key, int scancode, int action, int mods) {
 		LinkedList <Runnable> actionList = null;
 		if(action == GLFW_RELEASE) {
@@ -39,6 +53,10 @@ public class InputManager {
 		if(actionList != null) {
 			actionList.forEach(a -> a.run());
 		}
+	}
+
+	public void handleCursorPositionEvent(double x, double y) {
+
 	}
 
 	public void addKeyDownEvent(int key, Runnable f) {

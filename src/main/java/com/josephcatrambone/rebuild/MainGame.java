@@ -11,7 +11,10 @@ import static org.lwjgl.system.MemoryUtil.*;
 
 public class MainGame {
 	public static InputManager input;
+
 	private long windowHandle;
+
+	public final String SCREEN_TITLE = "ReBUILD";
 	public final int SCREEN_WIDTH = 640;
 	public final int SCREEN_HEIGHT = 480;
 
@@ -44,15 +47,14 @@ public class MainGame {
 		//glfwWindowHints(GLFW_VISIBLE, GLFW_FALSE
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
+		windowHandle = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, NULL, NULL);
+		if(windowHandle == NULL) { // NULL, not null.
+			throw new RuntimeException("Failed to create GLFW window!");
+		}
+
 		MainGame.input.addKeyDownEvent(GLFW_KEY_ESCAPE, () -> { glfwSetWindowShouldClose(windowHandle, true); });
 		glfwSetKeyCallback(windowHandle, MainGame.input.getKeyCallback());
-		/*
-		glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
-			if(key == GLFW_KEY_ESCAPE && ACTION == GLFW_RELEASE) {
-				glfwSetWindowShouldClose(windowHandle, true);
-			}
-		});
-		*/
+		glfwSetCursorPosCallback(windowHandle, MainGame.input.getMousePositionCallback());
 
 		// Center new window on screen.
 		GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -60,16 +62,16 @@ public class MainGame {
 
 		// Make active context and enable v-sync.
 		glfwMakeContextCurrent(windowHandle);
-		glfwSwapInterval(1);
+		glfwSwapInterval(1); // VSync.
 
 		// Show Window
 		glfwShowWindow(windowHandle);
+
+		// Some people create this in the main loop.  Don't care.
+		GL.createCapabilities();
 	}
 
 	public void loop() {
-		GL.createCapabilities();
-		// Clear color.
-
 		while(!glfwWindowShouldClose(windowHandle)) {
 			glfwSwapBuffers(windowHandle);
 			glfwPollEvents();
