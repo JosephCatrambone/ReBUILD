@@ -1,18 +1,20 @@
 package com.josephcatrambone.rebuild;
 
-import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
+import java.util.Stack;
+
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class MainGame {
-	public static InputManager input;
+	public static InputManager inputManager;
+	public static Stack<Scene> sceneManager;
 
 	private long windowHandle;
+	private double lastUpdateTime;
 
 	public final String SCREEN_TITLE = "ReBUILD";
 	public final int SCREEN_WIDTH = 640;
@@ -31,8 +33,9 @@ public class MainGame {
 	}
 
 	public void init() {
-		// Initialize input handler.
-		MainGame.input = new InputManager();
+		// Initialize inputManager handler.
+		MainGame.inputManager = new InputManager();
+		MainGame.sceneManager = new Stack<>();
 
 		// Set output.
 		GLFWErrorCallback.createPrint(System.err).set();
@@ -52,9 +55,9 @@ public class MainGame {
 			throw new RuntimeException("Failed to create GLFW window!");
 		}
 
-		MainGame.input.addKeyDownEvent(GLFW_KEY_ESCAPE, () -> { glfwSetWindowShouldClose(windowHandle, true); });
-		glfwSetKeyCallback(windowHandle, MainGame.input.getKeyCallback());
-		glfwSetCursorPosCallback(windowHandle, MainGame.input.getMousePositionCallback());
+		MainGame.inputManager.addKeyDownEvent(GLFW_KEY_ESCAPE, () -> { glfwSetWindowShouldClose(windowHandle, true); });
+		glfwSetKeyCallback(windowHandle, MainGame.inputManager.getKeyCallback());
+		glfwSetCursorPosCallback(windowHandle, MainGame.inputManager.getMousePositionCallback());
 
 		// Center new window on screen.
 		GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -72,9 +75,20 @@ public class MainGame {
 	}
 
 	public void loop() {
+		lastUpdateTime = glfwGetTime();
 		while(!glfwWindowShouldClose(windowHandle)) {
+			// Draw
+			sceneManager.peek().draw();
+
+			// Swap buffers and read inputs.
 			glfwSwapBuffers(windowHandle);
 			glfwPollEvents();
+
+			// Handle events.
+			double now = glfwGetTime();
+			double timedelta = now - lastUpdateTime;
+			sceneManager.peek().update(timedelta);
+			lastUpdateTime = glfwGetTime();
 		}
 	}
 

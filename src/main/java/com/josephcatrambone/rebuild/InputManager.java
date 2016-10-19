@@ -11,11 +11,12 @@ import java.util.LinkedList;
 
 import static org.lwjgl.glfw.GLFW.*;
 
-public class InputManager {
+class InputManager {
 	HashMap <Integer, LinkedList<Runnable>> keyDownBindings; // Called on press.
 	HashMap <Integer, LinkedList<Runnable>> keyUpBindings; // Called on release.
 	HashSet <Integer> keyPressed; // Updated once every frame.
 	HashSet <Integer> keyReleased;
+	boolean[] keyDown = new boolean[256];
 
 	// Wrappers for getting mouse position.
 	DoubleBuffer b1 = BufferUtils.createDoubleBuffer(1);
@@ -52,6 +53,12 @@ public class InputManager {
 
 		if(actionList != null) {
 			actionList.forEach(a -> a.run());
+		}
+
+		// Thanks ChernoProject.
+		// Since there are multiply types of events, we just check to see if it's released.  If it's not released, it's pressed.
+		if(key < 256) {
+			keyDown[key] = action != GLFW_RELEASE;
 		}
 	}
 
