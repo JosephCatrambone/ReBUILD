@@ -44,15 +44,19 @@ public class MainGame {
 		//glfwWindowHints(GLFW_VISIBLE, GLFW_FALSE
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
+		MainGame.input.addKeyDownEvent(GLFW_KEY_ESCAPE, () -> { glfwSetWindowShouldClose(windowHandle, true); });
+		glfwSetKeyCallback(windowHandle, MainGame.input.getKeyCallback());
+		/*
 		glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
 			if(key == GLFW_KEY_ESCAPE && ACTION == GLFW_RELEASE) {
 				glfwSetWindowShouldClose(windowHandle, true);
 			}
 		});
+		*/
 
 		// Center new window on screen.
 		GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowPos(windowHandle, (vidmode.width()-SCREEN_WIDTH)/2, (vidmode.height()-SCREEN_HEIGHT)/2);
+		glfwSetWindowPos(windowHandle, (vidMode.width()-SCREEN_WIDTH)/2, (vidMode.height()-SCREEN_HEIGHT)/2);
 
 		// Make active context and enable v-sync.
 		glfwMakeContextCurrent(windowHandle);
