@@ -10,6 +10,7 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class MainGame {
+	public static GraphicsManager graphicsManager;
 	public static InputManager inputManager;
 	public static Stack<Scene> sceneManager;
 
@@ -36,6 +37,7 @@ public class MainGame {
 		// Initialize inputManager handler.
 		MainGame.inputManager = new InputManager();
 		MainGame.sceneManager = new Stack<>();
+		MainGame.graphicsManager = new GraphicsManager();
 
 		// Set output.
 		GLFWErrorCallback.createPrint(System.err).set();
@@ -75,6 +77,7 @@ public class MainGame {
 	}
 
 	public void loop() {
+		sceneManager.push(new BlankScene());
 		lastUpdateTime = glfwGetTime();
 		while(!glfwWindowShouldClose(windowHandle)) {
 			// Draw
