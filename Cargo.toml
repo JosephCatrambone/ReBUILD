@@ -1,0 +1,9 @@
+[package]
+name = "rebuild"
+version = "0.1.0"
+authors = ["Joseph Catrambone <jo.jcat@gmail.com>"]
+
+[dependencies]
+glium = "*"
+rand = "*"
+imgui="0.0.10"
