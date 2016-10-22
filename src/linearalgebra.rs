@@ -1,6 +1,6 @@
 
 use std::ops::{Index, IndexMut};
-type Scalar = f32;
+pub type Scalar = f32;
 
 #[derive(Clone, Debug)]
 pub struct Matrix {
@@ -20,8 +20,8 @@ impl Matrix {
 
 	fn new_from_fn(height : usize, width : usize, f : Box<Fn(usize, usize)->Scalar>) -> Matrix {
 		let mut m = Vec::<Scalar>::new();
-		for y in (0..height) {
-			for x in (0..width) {
+		for y in 0..height {
+			for x in 0..width {
 				m.push(f(y, x));
 			}
 		}
@@ -49,7 +49,7 @@ impl Matrix {
 	}
 
 	fn binop_i(&mut self, other : &Matrix, f : Box<Fn(Scalar, Scalar)->Scalar>) {
-		for i in (0..self.size() as usize) {
+		for i in 0..self.size() as usize {
 			self.data[i] = f(self.data[i], other[i]);
 		}
 	}

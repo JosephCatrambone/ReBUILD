@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 use glium::{DisplayBuild, Surface};
 use glium::index::PrimitiveType;
 use glium::glutin;
-use imgui::{ImGui, Ui, ImGuiKey};
+use imgui::*;
 use imgui::glium_renderer::Renderer;
 
 use mesh::*;
@@ -30,7 +30,7 @@ fn main() {
 
 	let mut display = glutin::WindowBuilder::new().build_glium().unwrap();
 	let mut imgui = ImGui::init();
-	let ui_renderer = Renderer::init(&mut imgui, &display).unwrap();
+	let mut ui_renderer = Renderer::init(&mut imgui, &display).unwrap();
 	//let mut timeAccumulator = Duration::new(0, 0);
 	//let mut now = Instant::now();
 
@@ -49,7 +49,15 @@ fn main() {
 
 		// Update UI.
 		let window = display.get_window().unwrap();
-		ui_renderer.render(&mut target, imgui.frame(window.get_inner_size_points().unwrap(), window.get_inner_size_pixels().unwrap(), delta_time/1.0e6f32));
+		let ui_frame = imgui.frame(window.get_inner_size_points().unwrap(), window.get_inner_size_pixels().unwrap(), delta_time/1.0e6f32);
+		ui_frame.window(im_str!("TITLE!"))
+			.size((300.0, 100.0), ImGuiSetCond_FirstUseEver)
+			.build(|| {
+				ui_frame.text(im_str!("Hello world!"));
+				ui_frame.separator();
+				ui_frame.text(im_str!(" ~~~~ "));
+			});
+		ui_renderer.render(&mut target, ui_frame);
 
 		target.finish().unwrap();
 
@@ -57,9 +65,18 @@ fn main() {
 		for event in display.poll_events() {
 			match event {
 				glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
+				glutin::Event::KeyboardInput(_, _, Some(x)) => {},
+				glutin::Event::MouseMoved(x, y) => { 
+					//let scale = &imgui_ref.display_framebuffer_scale();
+					//imgui.set_mouse_pos(x as f32 / scale.0, y as f32 / scale.1);
+					},
 				_ => {},
 			}
 		}
+
+//self.imgui.set_mouse_down(&[self.mouse_pressed.0, self.mouse_pressed.1, self.mouse_pressed.2, false, false]);
+//self.imgui.set_mouse_wheel(self.mouse_wheel / scale.1);
+//self.mouse_wheel = 0.0;
 
 		// Logic loop.
 
