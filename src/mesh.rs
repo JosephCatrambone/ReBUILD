@@ -16,4 +16,17 @@ pub struct Mesh {
 	material : usize,
 }
 
+pub struct MeshRenderer {
+	// glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList)
+	// vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap()
+	// target.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniform, &Default::default()).unwrap()
+}
 
+
+impl MeshRenderer {
+	pub fn new() -> MeshRenderer {
+		MeshRenderer {
+
+		}
+	}
+}

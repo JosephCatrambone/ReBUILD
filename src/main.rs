@@ -9,6 +9,7 @@ extern crate imgui;
 
 mod mesh;
 mod linearalgebra;
+mod scene;
 
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -21,6 +22,7 @@ use imgui::glium_renderer::Renderer;
 
 use mesh::*;
 use linearalgebra::*;
+use scene::*;
 
 fn main() {
 	const WINDOW_WIDTH: usize = 1280;
@@ -29,8 +31,12 @@ fn main() {
 	let mut delta_time : f32 = 0f32;
 
 	let mut display = glutin::WindowBuilder::new().build_glium().unwrap();
+	let mut mesh_renderer = MeshRenderer::new(); // Also holds mesh data.
+	let mut scene_stack : Vec<Box<Scene>> = vec![]; // TODO: Get this working.
+
 	let mut imgui = ImGui::init();
 	let mut ui_renderer = Renderer::init(&mut imgui, &display).unwrap();
+	
 	//let mut timeAccumulator = Duration::new(0, 0);
 	//let mut now = Instant::now();
 
@@ -67,9 +73,9 @@ fn main() {
 				glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
 				glutin::Event::KeyboardInput(_, _, Some(x)) => {},
 				glutin::Event::MouseMoved(x, y) => { 
-					//let scale = &imgui_ref.display_framebuffer_scale();
-					//imgui.set_mouse_pos(x as f32 / scale.0, y as f32 / scale.1);
-					},
+					//let scale = imgui_ref.display_framebuffer_scale();
+					//imgui_ref.set_mouse_pos(x as f32 / scale.0 as f32, y as f32 / scale.1 as f32);
+				},
 				_ => {},
 			}
 		}
