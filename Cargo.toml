@@ -6,4 +6,4 @@ authors = ["Joseph Catrambone <jo.jcat@gmail.com>"]
 [dependencies]
 glium = "*"
 rand = "*"
-imgui="0.0.10"
+rayon = "*"

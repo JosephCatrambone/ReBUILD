@@ -1,5 +1,7 @@
 
+pub mod Menu;
+
 pub trait Scene {
-	fn render(screen : &Drawable, deltaTime : f32) -> ();
-	fn update(deltaTime : f32) -> ();
+	fn render(&self, deltaTime : f32) -> ();
+	fn update(&mut self, deltaTime : f32) -> ();
 }

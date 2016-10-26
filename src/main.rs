@@ -1,42 +1,47 @@
-#[allow(dead_code)]
-#[allow(unused_imports)]
+//#[allow(dead_code)]
+//#[allow(unused_imports)]
+
+// For linear algebra submodule.
+#![feature(collections)]
+#![feature(collections_range)]
+extern crate collections;
 
 extern crate rand;
 #[macro_use]
 extern crate glium;
 #[macro_use]
-extern crate imgui;
+extern crate rayon;
 
 mod mesh;
 mod linearalgebra;
 mod scene;
 
+use std::env;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
 use glium::{DisplayBuild, Surface};
 use glium::index::PrimitiveType;
 use glium::glutin;
-use imgui::*;
-use imgui::glium_renderer::Renderer;
 
 use mesh::*;
 use linearalgebra::*;
 use scene::*;
 
+// Maybe we should call this library ReBar because it's a foundation for so many of my apps.
 fn main() {
 	const WINDOW_WIDTH: usize = 1280;
 	const WINDOW_HEIGHT: usize = 1024;
+
+	let args: Vec<String> = env::args().map(|arg| arg.to_owned()).collect();
 
 	let mut delta_time : f32 = 0f32;
 
 	let mut display = glutin::WindowBuilder::new().build_glium().unwrap();
 	let mut mesh_renderer = MeshRenderer::new(); // Also holds mesh data.
-	let mut scene_stack : Vec<Box<Scene>> = vec![]; // TODO: Get this working.
+	let mut scene_stack : Vec<Box<Scene>> = Vec::new(); // TODO: Get this working.
 
-	let mut imgui = ImGui::init();
-	let mut ui_renderer = Renderer::init(&mut imgui, &display).unwrap();
-	
 	//let mut timeAccumulator = Duration::new(0, 0);
 	//let mut now = Instant::now();
 
@@ -44,6 +49,8 @@ fn main() {
 	let vertex_shader_src = include_str!("vert_shader.cl");
 	let fragment_shader_src = include_str!("frag_shader.cl");
 	let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+
+	scene_stack.push(Box::new(Menu::MainMenu::new()));
 
 	'main: loop {
 		// Start stopwatch.
@@ -55,16 +62,6 @@ fn main() {
 
 		// Update UI.
 		let window = display.get_window().unwrap();
-		let ui_frame = imgui.frame(window.get_inner_size_points().unwrap(), window.get_inner_size_pixels().unwrap(), delta_time/1.0e6f32);
-		ui_frame.window(im_str!("TITLE!"))
-			.size((300.0, 100.0), ImGuiSetCond_FirstUseEver)
-			.build(|| {
-				ui_frame.text(im_str!("Hello world!"));
-				ui_frame.separator();
-				ui_frame.text(im_str!(" ~~~~ "));
-			});
-		ui_renderer.render(&mut target, ui_frame);
-
 		target.finish().unwrap();
 
 		// Event loop.
@@ -79,10 +76,6 @@ fn main() {
 				_ => {},
 			}
 		}
-
-//self.imgui.set_mouse_down(&[self.mouse_pressed.0, self.mouse_pressed.1, self.mouse_pressed.2, false, false]);
-//self.imgui.set_mouse_wheel(self.mouse_wheel / scale.1);
-//self.mouse_wheel = 0.0;
 
 		// Logic loop.
 
