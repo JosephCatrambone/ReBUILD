@@ -1,4 +1,6 @@
 
+use glium::Frame;
+
 use scene::Scene;
 
 pub struct MainMenu {
@@ -14,7 +16,7 @@ impl MainMenu {
 }
 
 impl Scene for MainMenu {
-	fn render(&self, deltaTime : f32) -> () {}
+	fn render(&self, surface: &mut Frame, deltaTime : f32) -> () {}
 	fn update(&mut self, deltaTime : f32) -> () {}
 }
 

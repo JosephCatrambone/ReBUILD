@@ -2,9 +2,10 @@
 //#[allow(unused_imports)]
 
 // For linear algebra submodule.
-#![feature(collections)]
-#![feature(collections_range)]
-extern crate collections;
+// Not yet supported.
+//#![feature(collections)]
+//#![feature(collections_range)]
+//extern crate collections;
 
 extern crate rand;
 #[macro_use]
@@ -39,7 +40,7 @@ fn main() {
 	let mut delta_time : f32 = 0f32;
 
 	let mut display = glutin::WindowBuilder::new().build_glium().unwrap();
-	let mut mesh_renderer = MeshRenderer::new(); // Also holds mesh data.
+	let mut mesh_renderer = MeshRenderer::new(&display); // Holds mesh data and vertex buffers.  Pass reference to display for building buffers.
 	let mut scene_stack : Vec<Box<Scene>> = Vec::new(); // TODO: Get this working.
 
 	//let mut timeAccumulator = Duration::new(0, 0);

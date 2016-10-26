@@ -6,8 +6,8 @@
 extern crate collections;
 */
 
-use std::ops::{Index, IndexMut}; // Not this Range.
-use collections::range::RangeArgument;
+use std::ops::{Index, IndexMut}; // Possible Range from here.
+//use collections::range::RangeArgument; // When finally supported.
 
 use rayon::prelude::*;
 
@@ -55,25 +55,25 @@ impl Matrix {
 		Matrix::new_from_fn(height, width, Box::new(|x, y| { if x == y { 1.0 as Scalar } else { 0.0 as Scalar } }))
 	}
 
-	fn get_slice(&self, rows : RangeArgument<usize>, columns : RangeArgument<usize>) -> Matrix {
-		let rows_start = rows.start.unwrap_or(0);
-		let rows_end = rows.end.unwrap_or(self.rows);
-		let columns_start = columns.start.unwrap_or(0);
-		let columns_end = columns.end.unwrap_or(self.columns);
+	fn get_slice(&self, rows_start : Option<usize>, rows_end : Option<usize>, columns_start : Option<usize>, columns_end : Option<usize>) -> Matrix {
+		let rows_start = rows_start.unwrap_or(0);
+		let rows_end = rows_end.unwrap_or(self.rows);
+		let columns_start = columns_start.unwrap_or(0);
+		let columns_end = columns_end.unwrap_or(self.columns);
 		let mut m = Matrix::zeros(rows_end - rows_start, columns_end - columns_start);
-		for r in rows {
-			for c in columns.clone() {
+		for r in rows_start..rows_end {
+			for c in columns_start..columns_end {
 				m[(r-rows_start, c-columns_start)] = self[(r, c)];
 			}
 		}
 		m
 	}
 
-	fn set_slice(&mut self, rows : RangeArgument<usize>, columns : RangeArgument<usize>, values : &Matrix) {
-		let rows_start = rows.start.unwrap_or(0);
-		let rows_end = rows.end.unwrap_or(self.rows);
-		let columns_start = columns.start.unwrap_or(0);
-		let columns_end = columns.end.unwrap_or(self.columns);
+	fn set_slice(&mut self, rows_start : Option<usize>, rows_end : Option<usize>, columns_start : Option<usize>, columns_end : Option<usize>, values : &Matrix) {
+		let rows_start = rows_start.unwrap_or(0);
+		let rows_end = rows_end.unwrap_or(self.rows);
+		let columns_start = columns_start.unwrap_or(0);
+		let columns_end = columns_end.unwrap_or(self.columns);
 		for r in rows_start..rows_end {
 			for c in columns_start .. columns_end { // If we were using the range, we'd have to do columns.clone() on the inner loop.
 				self[(r,c)] = values[(r-rows_start, c-columns_start)];
@@ -247,7 +247,7 @@ mod tests {
 	fn test_range() {
 		let mut a = Matrix::new_from_fn(5, 5, Box::new(|i,j| { (i*j) as f32 }));
 		let mut b = Matrix::new_from_fn(10, 10, Box::new(|i, j| { (i*j) as f32 }));
-		assert!(a.get_slice((1..), (1..)).data == b.get_slice((1..5), (1..5)).data);
+		assert!(a.get_slice(Some(1), None, Some(1), None).data == b.get_slice(Some(1), Some(5), Some(1), Some(5)).data);
 	}
 }
 
