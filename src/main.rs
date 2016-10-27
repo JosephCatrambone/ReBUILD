@@ -16,6 +16,7 @@ extern crate rayon;
 mod mesh;
 mod linearalgebra;
 mod scene;
+mod computegraph;
 
 use std::env;
 use std::sync::{Arc, Mutex};

@@ -6,7 +6,7 @@
 extern crate collections;
 */
 
-use std::ops::{Index, IndexMut}; // Possible Range from here.
+use std::ops::{Index, IndexMut, Range}; // Possible Range from here.
 //use collections::range::RangeArgument; // When finally supported.
 
 use rayon::prelude::*;
@@ -21,7 +21,7 @@ pub struct Matrix {
 }
 
 impl Matrix {
-	fn new() -> Matrix {
+	pub fn new() -> Matrix {
 		Matrix {
 			rows : 0,
 			columns : 0,
@@ -29,7 +29,7 @@ impl Matrix {
 		}
 	}
 
-	fn new_from_fn(height : usize, width : usize, f : Box<Fn(usize, usize)->Scalar>) -> Matrix {
+	pub fn new_from_fn(height : usize, width : usize, f : Box<Fn(usize, usize)->Scalar>) -> Matrix {
 		let mut m = Vec::<Scalar>::new();
 		for y in 0..height {
 			for x in 0..width {
@@ -43,7 +43,7 @@ impl Matrix {
 		}
 	}
 
-	fn zeros(height : usize, width : usize) -> Matrix {
+	pub fn zeros(height : usize, width : usize) -> Matrix {
 		Matrix {
 			rows : height,
 			columns : width,
@@ -51,15 +51,15 @@ impl Matrix {
 		}
 	}
 
-	fn identity(height : usize, width : usize) -> Matrix {
+	pub fn identity(height : usize, width : usize) -> Matrix {
 		Matrix::new_from_fn(height, width, Box::new(|x, y| { if x == y { 1.0 as Scalar } else { 0.0 as Scalar } }))
 	}
 
-	fn get_slice(&self, rows_start : Option<usize>, rows_end : Option<usize>, columns_start : Option<usize>, columns_end : Option<usize>) -> Matrix {
-		let rows_start = rows_start.unwrap_or(0);
-		let rows_end = rows_end.unwrap_or(self.rows);
-		let columns_start = columns_start.unwrap_or(0);
-		let columns_end = columns_end.unwrap_or(self.columns);
+	pub fn get_slice(&self, rows : Range<isize>, columns : Range<isize>) -> Matrix {
+		let rows_start = rows.start as usize;
+		let rows_end = if rows.end >= 0 { rows.end as usize } else { (self.rows as isize+1+rows.end) as usize };
+		let columns_start = columns.start as usize;
+		let columns_end = if columns.end >= 0 { rows.end as usize } else { (self.columns as isize+1+columns.end) as usize };
 		let mut m = Matrix::zeros(rows_end - rows_start, columns_end - columns_start);
 		for r in rows_start..rows_end {
 			for c in columns_start..columns_end {
@@ -69,11 +69,11 @@ impl Matrix {
 		m
 	}
 
-	fn set_slice(&mut self, rows_start : Option<usize>, rows_end : Option<usize>, columns_start : Option<usize>, columns_end : Option<usize>, values : &Matrix) {
-		let rows_start = rows_start.unwrap_or(0);
-		let rows_end = rows_end.unwrap_or(self.rows);
-		let columns_start = columns_start.unwrap_or(0);
-		let columns_end = columns_end.unwrap_or(self.columns);
+	pub fn set_slice(&mut self, rows : Range<isize>, columns : Range<isize>, values : &Matrix) {
+		let rows_start = rows.start as usize;
+		let rows_end = if rows.end >= 0 { rows.end as usize } else { (self.rows as isize+1+rows.end) as usize };
+		let columns_start = columns.start as usize;
+		let columns_end = if columns.end >= 0 { rows.end as usize } else { (self.columns as isize+1+columns.end) as usize };
 		for r in rows_start..rows_end {
 			for c in columns_start .. columns_end { // If we were using the range, we'd have to do columns.clone() on the inner loop.
 				self[(r,c)] = values[(r-rows_start, c-columns_start)];
@@ -81,23 +81,23 @@ impl Matrix {
 		}
 	}
 
-	fn shape(&self) -> (usize, usize) {
+	pub fn shape(&self) -> (usize, usize) {
 		(self.rows, self.columns)
 	}
 
-	fn size(&self) -> usize {
+	pub fn size(&self) -> usize {
 		self.rows*self.columns
 	}
 
-	fn width(&self) -> usize {
+	pub fn width(&self) -> usize {
 		self.columns
 	}
 
-	fn height(&self) -> usize {
+	pub fn height(&self) -> usize {
 		self.rows
 	}
 
-	fn binop(lhs : &Matrix, rhs : &Matrix, target : &mut Matrix, f : Box<Fn(Scalar, Scalar)->Scalar>) {
+	pub fn binop(lhs : &Matrix, rhs : &Matrix, target : &mut Matrix, f : Box<Fn(Scalar, Scalar)->Scalar>) {
 		// TODO: Implement parallel with Rayon.
 		//target.par_iter_mut().for_each(move |p| *p
 		for i in 0..target.size() as usize {
@@ -105,20 +105,20 @@ impl Matrix {
 		}
 	}
 
-	fn binop_i(&mut self, other : &Matrix, f : Box<Fn(Scalar, Scalar)->Scalar>) {
+	pub fn binop_i(&mut self, other : &Matrix, f : Box<Fn(Scalar, Scalar)->Scalar>) {
 		for i in 0..self.size() as usize {
 			self.data[i] = f(self.data[i], other[i]);
 		}
 	}
 
-	fn unop_i(&mut self, f : Box<Fn(Scalar)->Scalar>) {
+	pub fn unop_i(&mut self, f : Box<Fn(Scalar)->Scalar>) {
 		//self.data.par_iter_mut().for_each(|p| *p = f(*p));
 		for i in 0..self.size() as usize {
 			self.data[i] = f(self.data[i]);
 		}
 	}
 
-	fn transpose(&self) -> Matrix {
+	pub fn transpose(&self) -> Matrix {
 		let mut mt = Matrix::zeros(self.columns, self.rows);
 		for r in 0..self.rows {
 			for c in 0..self.columns {
@@ -128,7 +128,7 @@ impl Matrix {
 		mt
 	}
 
-	fn matmul(&self, rhs : &Matrix) -> Matrix {
+	pub fn matmul(&self, rhs : &Matrix) -> Matrix {
 		//#![cfg_attr(linearalgebra, parallel)]
 		// TODO: This does two memory allocations, one to set out the zeros, one to apply the values.  Wonder if there's a way to do it with just one mem access.
 		let mut target = Matrix::zeros(self.rows, rhs.columns);
@@ -247,7 +247,7 @@ mod tests {
 	fn test_range() {
 		let mut a = Matrix::new_from_fn(5, 5, Box::new(|i,j| { (i*j) as f32 }));
 		let mut b = Matrix::new_from_fn(10, 10, Box::new(|i, j| { (i*j) as f32 }));
-		assert!(a.get_slice(Some(1), None, Some(1), None).data == b.get_slice(Some(1), Some(5), Some(1), Some(5)).data);
+		assert!(a.get_slice((1..-1), (1..-1)).data == b.get_slice((1..5), (1..5)).data);
 	}
 }
 
