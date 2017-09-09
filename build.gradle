@@ -52,8 +52,8 @@ project(":core") {
 	apply plugin: "kotlin"
 
 	sourceSets {
-		main.kotlin.srcDirs += 'core/src/io/xoana/ss13'
-		main.java.srcDirs += 'core/src/io/xoana/ss13'
+		main.kotlin.srcDirs += 'core/src/io/xoana/rebuild'
+		main.java.srcDirs += 'core/src/io/xoana/rebuild'
 	}
 
     dependencies {

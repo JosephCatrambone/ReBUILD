@@ -19,23 +19,21 @@ class MainGame : ApplicationAdapter() {
 	companion object {
 		var assets:AssetManager = AssetManager()
 		var atlas:TextureAtlas = TextureAtlas()
+		var stateStack = Stack<GameState>()
 	}
 
 	override fun create() {
-		MainGame.atlas = TextureAtlas(Gdx.files.internal("atlas_image.atlas"));
+		//MainGame.atlas = TextureAtlas(Gdx.files.internal("atlas_image.atlas"));
 
 		// Initialize stage.
-		mainStage = Stage(ScreenViewport())
-
+		//mainStage = Stage(ScreenViewport())
+		stateStack.push(LevelEditor2D(this))
 	}
 
 	override fun render() {
 		super.render()
-
-		//Gdx.gl.glViewport(0, 0, Gdx.graphics.width, Gdx.graphics.height)
-		Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
-
+		stateStack.peek().render()
+		stateStack.peek().update(Gdx.graphics.deltaTime)
 	}
 
 	override fun dispose() {
@@ -45,4 +43,10 @@ class MainGame : ApplicationAdapter() {
 		// DO NOT RECOMPUTE THE CAMERA HERE!  It will botch our config.  Leave it alone.
 		//camera = new PerspectiveCamera(FOV, width, height);
 	}
+}
+
+abstract class GameState(val mainGameRef:MainGame) {
+	abstract fun render();
+	abstract fun update(deltaTime: Float);
+	abstract fun destroy();
 }
