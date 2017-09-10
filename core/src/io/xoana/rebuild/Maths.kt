@@ -9,12 +9,9 @@ import com.badlogic.gdx.math.Vector3
 class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 
 	// libGDX Interop section.
-	fun constructor(v2: Vector2) {
-		this.x = v2.x
-		this.y = v2.y
-		z = 0f
-		w = 0f
-	}
+	constructor(v2: Vector2): this( v2.x, v2.y, 0f, 0f)
+	constructor(v3: Vector3):this(v3.x, v3.y, v3.z, 0f)
+
 	fun toGDXVector2(): Vector2 = Vector2(this.x, this.y)
 	fun toGDXVector3(): Vector3 = Vector3(this.x, this.y, this.z)
 	// End libGDX interop section

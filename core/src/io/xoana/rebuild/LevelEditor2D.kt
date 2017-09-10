@@ -37,6 +37,7 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.DARK_GRAY
 		// Unfortunately, we've got top-left screen as (0,0) and bottom right as (width,height)
+		/*
 		val cameraTopLeftProjection = camera.unproject(Vector3(0f, 0f, 0f))
 		val cameraBottomRightProjection = camera.unproject(Vector3(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat(), 0f))
 		println("Camera top left: ${cameraTopLeftProjection.x} ${cameraTopLeftProjection.y} ${cameraTopLeftProjection.z}")
@@ -49,10 +50,18 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 		for(i in gridEnd.y.toInt() until gridStart.y.toInt() step gridLevel) {
 			shapeRenderer.line(-camera.viewportWidth, i.toFloat(), camera.viewportWidth, i.toFloat());
 		}
+		*/
+		for(i in 0 until 65536 step gridLevel) {
+			shapeRenderer.line(i.toFloat(), 0f, i.toFloat(), 65536f)
+			shapeRenderer.line(0f, i.toFloat(), 65536f, i.toFloat())
+		}
 		shapeRenderer.end()
 
 		// Draw Level
 		level.draw(shapeRenderer)
+
+		// Draw tools.
+		activeTool?.draw(shapeRenderer)
 
 		// Draw UI
 	}
@@ -63,13 +72,15 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 		if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
 			//mode = TOOL_MODE.CAMERA_MOVE
 			activeTool = CameraMoveTool(this)
+		} else if(Gdx.input.isKeyPressed(Input.Keys.D)) {
+			activeTool = DrawTool(this)
 		}
 
 		activeTool?.onUpdate(deltaTime)
 
 		// Update camera.
 		// Smoothly move towards our target.  TIME INDEPENDENT!
-		val cameraPos = Vec(camera.position.x, camera.position.y)
+		val cameraPos = Vec(camera.position)
 		val interpolaiton = cameraTarget*(1.0f-cameraSmoothing) + (cameraPos*cameraSmoothing)
 		camera.position.set(interpolaiton.x, interpolaiton.y, camera.position.z)
 	}
@@ -89,6 +100,7 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 
 abstract class LevelTool(val editorRef: LevelEditor2D) {
 	abstract fun onUpdate(deltaTime: Float);
+	open fun draw(shapeRenderer: ShapeRenderer) {}
 }
 
 class SelectTool(editorRef:LevelEditor2D) : LevelTool(editorRef) {
@@ -114,9 +126,54 @@ class CameraMoveTool(editorRef:LevelEditor2D) : LevelTool(editorRef) {
 }
 
 class DrawTool(editorRef: LevelEditor2D) : LevelTool(editorRef) {
-	
-	override fun onUpdate(deltaTime: Float) {
+	// When we make a line we have a few things that can happen:
+	// We can make a new sector from whole cloth.
+	// We can divide a sector into two.
+	// We can make an extension to a sector.
+	// We can't BRIDGE sectors yet.
 
+	val POINT_SIZE = 5f
+	var newLine = mutableListOf<Vec>()
+	var nextPoint = Vec()
+	var wasPressed = false // If mouse/touch was down.
+
+	override fun onUpdate(deltaTime: Float) {
+		// Unproject point from camera.
+		nextPoint = Vec(editorRef.camera.unproject(Vector3(Gdx.input.x.toFloat(), Gdx.input.y.toFloat(), 0f)))
+
+		val touched = Gdx.input.isTouched(0) || Gdx.input.isButtonPressed(0)
+		if(touched) {
+			wasPressed = true
+		} else if(wasPressed && !touched) { // Click release.
+			// Push onto our list.
+			newLine.add(nextPoint)
+			wasPressed = false
+
+			// Determine if we're finished.  Did we touch another sector?  If so, extend or split that sector.
+			// Did we not touch another sector but touch our start point?  New sector.
+		}
+	}
+
+	override fun draw(sr: ShapeRenderer) {
+		sr.begin(ShapeRenderer.ShapeType.Line)
+
+		// Draw the candidate line + pts
+		if(newLine.size > 1) {
+			sr.color = Color.CORAL
+			for (i in 0 until newLine.size-1) {
+				sr.line(newLine[i].x, newLine[i].y, newLine[i+1].x, newLine[i+1].y)
+			}
+		}
+
+		// Draw the point.
+		sr.color = Color.OLIVE
+		newLine.forEach{pt ->
+			sr.rect(pt.x-(POINT_SIZE/2), pt.y-(POINT_SIZE/2), POINT_SIZE, POINT_SIZE)
+		}
+		sr.color = Color.GREEN
+		sr.rect(nextPoint.x-(POINT_SIZE/2), nextPoint.y-(POINT_SIZE/2), POINT_SIZE, POINT_SIZE)
+
+		sr.end()
 	}
 
 }
