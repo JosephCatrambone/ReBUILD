@@ -97,7 +97,7 @@ class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 	}
 }
 
-class Line(var start:Vec, var end:Vec) {
+class Line(val start:Vec, val end:Vec) {
 	/***
 	 *
 	 */
@@ -254,8 +254,70 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 	}
 }
 
-class Polygon(val points:MutableList<Vec>) {
-	fun pointInside(pt:Vec) {
+class Polygon(val points:List<Vec>) {
+	fun pointInside(pt:Vec): Boolean {
+		TODO()
+	}
 
+	fun splitAtPoints(p1:Vec, p2:Vec, vararg innerPoints:Vec): Pair<Polygon, Polygon> {
+		// Split the polygon with a fracture starting from p1 and running to p2.  Two polygons will be returned.
+		// If innerPoints are returned, they will be included in both polygons between the fracture points.
+		// Both p1 and p2 will be present in both sections.
+
+		// Go around the points and find the indices of the cut.
+		var p1Index=-1
+		var p1Distance = Float.MAX_VALUE
+		var p2Index=-1
+		var p2Distance = Float.MAX_VALUE
+		for(i in 0 until points.size) {
+			// Get the distance from this point to p1.
+			val distToP1 = p1.distanceSquared(points[i])
+			val distToP2 = p2.distanceSquared(points[i])
+			if(distToP1 < p1Distance) {
+				p1Index = i
+				p1Distance = distToP1
+			}
+			if(distToP2 < p2Distance) {
+				p2Index = i
+				p2Distance = distToP2
+			}
+		}
+
+		// Make sure that p1 comes first.
+		if(p2Index < p1Index) {
+			val temp = p1Index
+			p1Index = p2Index
+			p2Index = temp
+		}
+
+		// If we have no internal points, we can just return the two new poligons.
+		if(innerPoints.isEmpty()) {
+			val leftPoints = points.filterIndexed{ i,v -> i <= p1Index || i >= p2Index }
+			val rightPoints = points.filterIndexed{ i,v -> i >= p1Index && i <= p2Index }
+			return Pair(Polygon(leftPoints), Polygon(rightPoints))
+		} else {
+			// There are two ways to assemble the halfs.
+			// If the first point in the innerPoint list is closer to the start p1 and the end point is closer to p2, keep straight.  Otherwise flip the inner list.
+			// p1 ------------------------- p2
+			//     innerpt1 -------- innerp2
+			val p1ToSplitHeadDistance = points[p1Index].distanceSquared(innerPoints.first())
+			val p1ToSplitTailDistance = points[p1Index].distanceSquared(innerPoints.last())
+			val p2ToSplitHeadDistance = points[p2Index].distanceSquared(innerPoints.first())
+			val p2ToSplitTailDistance = points[p2Index].distanceSquared(innerPoints.last())
+			if(p1ToSplitHeadDistance < p2ToSplitHeadDistance && p2ToSplitTailDistance < p1ToSplitTailDistance) {
+				// We should take the points in order.
+				val leftPoints = points.filterIndexed{ i,v -> i <= p1Index }.plus(innerPoints).plus(points.filterIndexed{ i,v -> i >= p2Index })
+				val rightPoints = innerPoints.reversed().plus(points.filterIndexed{i,v -> i >= p1Index && i <= p2Index})
+				return Pair(Polygon(leftPoints), Polygon(rightPoints))
+			} else if(p1ToSplitHeadDistance > p2ToSplitHeadDistance && p2ToSplitTailDistance > p1ToSplitTailDistance) {
+				// We should take the points reversed.
+				val leftPoints = points.filterIndexed{ i,v -> i <= p1Index }.plus(innerPoints.reversed()).plus(points.filterIndexed{ i,v -> i >= p2Index })
+				val rightPoints = innerPoints.toList().plus(points.filterIndexed{i,v -> i >= p1Index && i <= p2Index})
+				return Pair(Polygon(leftPoints), Polygon(rightPoints))
+			} else {
+				// It's not clear which way they should rotate.
+				throw Exception("Ambiguous split direction.  Polygon can't figure out how to match up the divide.")
+			}
+		}
 	}
 }

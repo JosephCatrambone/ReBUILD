@@ -112,3 +112,11 @@ class CameraMoveTool(editorRef:LevelEditor2D) : LevelTool(editorRef) {
 		}
 	}
 }
+
+class DrawTool(editorRef: LevelEditor2D) : LevelTool(editorRef) {
+	
+	override fun onUpdate(deltaTime: Float) {
+
+	}
+
+}
