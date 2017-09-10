@@ -37,16 +37,21 @@ class MainGame : ApplicationAdapter() {
 	}
 
 	override fun dispose() {
+		while(stateStack.isNotEmpty()) {
+			stateStack.pop().dispose()
+		}
 	}
 
 	override fun resize(width: Int, height: Int) {
 		// DO NOT RECOMPUTE THE CAMERA HERE!  It will botch our config.  Leave it alone.
 		//camera = new PerspectiveCamera(FOV, width, height);
+		stateStack.peek().resize(width, height)
 	}
 }
 
 abstract class GameState(val mainGameRef:MainGame) {
 	abstract fun render();
 	abstract fun update(deltaTime: Float);
-	abstract fun destroy();
+	abstract fun dispose();
+	abstract fun resize(width:Int, height:Int);
 }

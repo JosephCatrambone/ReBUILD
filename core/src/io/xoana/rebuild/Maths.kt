@@ -254,6 +254,8 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 	}
 }
 
-class Poligon(val points:MutableList<Vec>) {
+class Polygon(val points:MutableList<Vec>) {
+	fun pointInside(pt:Vec) {
 
+	}
 }

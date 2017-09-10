@@ -6,14 +6,14 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Vector3
 
 /**
  * Created by jo on 2017-09-09.
  */
 class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
-	enum class TOOL_MODE{ SELECT, CAMERA_MOVE }
 
-	var mode:TOOL_MODE = TOOL_MODE.SELECT
+	var activeTool: LevelTool? = null
 
 	var shapeRenderer = ShapeRenderer()
 	var level = Level()
@@ -22,7 +22,7 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 	val cameraTarget = Vec(0f, 0f)
 	var cameraSmoothing: Float = 0.9f
 
-	var gridLevel:Int = 1 // Draw lines every 10^gridLevel pixel.
+	var gridLevel:Int = 10 // Draw lines every 10^gridLevel pixel.
 
 	override fun render() {
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.width, Gdx.graphics.height)
@@ -33,18 +33,23 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 		camera.update(true)
 		shapeRenderer.projectionMatrix = camera.combined
 
-		// Draw sample unit squares.
+		// Draw Grid
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		for(i in 0 until 10) {
-			shapeRenderer.rect(0f, 0f, Math.pow(10.0, i.toDouble()).toFloat(), Math.pow(10.0, i.toDouble()).toFloat());
+		shapeRenderer.color = Color.DARK_GRAY
+		// Unfortunately, we've got top-left screen as (0,0) and bottom right as (width,height)
+		val cameraTopLeftProjection = camera.unproject(Vector3(0f, 0f, 0f))
+		val cameraBottomRightProjection = camera.unproject(Vector3(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat(), 0f))
+		println("Camera top left: ${cameraTopLeftProjection.x} ${cameraTopLeftProjection.y} ${cameraTopLeftProjection.z}")
+		println("Camera bottom right: ${cameraBottomRightProjection.x} ${cameraBottomRightProjection.y} ${cameraBottomRightProjection.z}")
+		val gridStart = snapToGrid(Vec(cameraTopLeftProjection.x, cameraTopLeftProjection.y))
+		val gridEnd = snapToGrid(Vec(cameraBottomRightProjection.x, cameraBottomRightProjection.y))
+		for(i in gridStart.x.toInt() until gridEnd.x.toInt() step gridLevel) {
+			shapeRenderer.line(i.toFloat(), -camera.viewportHeight, i.toFloat(), camera.viewportHeight);
+		}
+		for(i in gridEnd.y.toInt() until gridStart.y.toInt() step gridLevel) {
+			shapeRenderer.line(-camera.viewportWidth, i.toFloat(), camera.viewportWidth, i.toFloat());
 		}
 		shapeRenderer.end()
-
-		// Draw Grid
-		shapeRenderer.color = Color.DARK_GRAY
-		if(gridLevel > 0) {
-
-		}
 
 		// Draw Level
 		level.draw(shapeRenderer)
@@ -55,24 +60,12 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 	override fun update(deltaTime: Float) {
 		// Hack: To handle saving and exporting, replace the current scene with an IO scene that uses Scene2D UI.
 		// Do all the keyboard input things.
-		mode = TOOL_MODE.SELECT
 		if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
-			mode = TOOL_MODE.CAMERA_MOVE
+			//mode = TOOL_MODE.CAMERA_MOVE
+			activeTool = CameraMoveTool(this)
 		}
 
-		// Do the mouse input things.
-		var dx1 = Gdx.input.getDeltaX(0)
-		var dy1 = Gdx.input.getDeltaY(0)
-		var dx2 = Gdx.input.getDeltaX(1)
-		var dy2 = Gdx.input.getDeltaY(1)
-		println("dx1: $dx1 \t dy1: $dy1 \t dx2: $dx2 \t dy2: $dy2")
-
-		if(mode == TOOL_MODE.CAMERA_MOVE) {
-			// If we flip X and leave Y alone, the camera moves to match the mouse direction.
-			// If we leave X alone and flip Y, the camera moves in the opposite direction of the mouse, like dragging.
-			cameraTarget.x += dx1.toFloat()
-			cameraTarget.y -= dy1.toFloat()
-		}
+		activeTool?.onUpdate(deltaTime)
 
 		// Update camera.
 		// Smoothly move towards our target.  TIME INDEPENDENT!
@@ -81,8 +74,41 @@ class LevelEditor2D(mgr:MainGame) : GameState(mgr) {
 		camera.position.set(interpolaiton.x, interpolaiton.y, camera.position.z)
 	}
 
-	override fun destroy() {
+	override fun dispose() {
 
 	}
 
+	override fun resize(width: Int, height: Int) {
+		camera.setToOrtho(false, width.toFloat(), height.toFloat())
+	}
+
+	fun snapToGrid(vec:Vec): Vec {
+		return Vec((vec.x*gridLevel).toInt().toFloat()/gridLevel, (vec.y*gridLevel).toInt().toFloat()/gridLevel)
+	}
+}
+
+abstract class LevelTool(val editorRef: LevelEditor2D) {
+	abstract fun onUpdate(deltaTime: Float);
+}
+
+class SelectTool(editorRef:LevelEditor2D) : LevelTool(editorRef) {
+	override fun onUpdate(deltaTime: Float) {
+
+	}
+}
+
+class CameraMoveTool(editorRef:LevelEditor2D) : LevelTool(editorRef) {
+	override fun onUpdate(deltaTime: Float) {
+		if(Gdx.input.isTouched(0) || Gdx.input.isButtonPressed(0)) {
+			var dx1 = Gdx.input.getDeltaX(0)
+			var dy1 = Gdx.input.getDeltaY(0)
+			var dx2 = Gdx.input.getDeltaX(1)
+			var dy2 = Gdx.input.getDeltaY(1)
+
+			// If we flip X and leave Y alone, the camera moves to match the mouse direction.
+			// If we leave X alone and flip Y, the camera moves in the opposite direction of the mouse, like dragging.
+			editorRef.cameraTarget.x -= dx1.toFloat()
+			editorRef.cameraTarget.y += dy1.toFloat()
+		}
+	}
 }
