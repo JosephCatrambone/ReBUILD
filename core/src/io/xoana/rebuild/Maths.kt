@@ -1,7 +1,7 @@
 package io.xoana.rebuild
 
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.math.Vector3
+//import com.badlogic.gdx.math.Vector2
+//import com.badlogic.gdx.math.Vector3
 
 /**
  * Created by Jo on 2017-07-09.
@@ -9,8 +9,8 @@ import com.badlogic.gdx.math.Vector3
 class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 
 	// libGDX Interop section.
-	constructor(v2: Vector2): this( v2.x, v2.y, 0f, 0f)
-	constructor(v3: Vector3):this(v3.x, v3.y, v3.z, 0f)
+	//constructor(v2: Vector2): this( v2.x, v2.y, 0f, 0f)
+	//constructor(v3: Vector3):this(v3.x, v3.y, v3.z, 0f)
 
 	fun toGDXVector2(): Vector2 = Vector2(this.x, this.y)
 	fun toGDXVector3(): Vector3 = Vector3(this.x, this.y, this.z)
@@ -56,7 +56,12 @@ class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 	fun cross2(other:Vec):Float = x*other.y - y*other.x
 
 	fun cross3(other:Vec):Vec {
-		TODO()
+		return Vec(
+			this.y*other.z - this.z*other.y, 
+			this.x*other.z - this.z*other.x,
+			this.x*other.y - this.y*other.x
+		)
+		// (2,3,4) (x) (5,6,7) -> (-3, 6, -3)
 	}
 
 	fun normalized():Vec {
@@ -133,6 +138,52 @@ class Line(val start:Vec, val end:Vec) {
 		return a + r*t
 	}
 
+	fun shortestConnectingSegment(other:Line, epsilon:Float=1e-6): Line? {
+		// Returns the smallest line segment between two lines in N-dimensional space.
+		// This can be thought of as 'intersection' in some sense if len < epsilon.
+		// Ported from Paul Bourke's algorithm.
+		// The line from L12 to L34 is Lab.
+		// Lab = Pa -> Pb
+		// L12 = P1 -> P2
+		// L34 = P3 -> P4
+		// Pa = P1 + m(P2-P1) // Pa is on L12
+		// Pb = P3 + n(P4-P3) // Pb is on L34
+		// Want to minimize ||Pb - Pa||^2
+		// Therefore: minimize ||P3 + n(P4-P3) - P1 + m(P2-P1)||^2
+		// Side note: shortest line between the two has to be perpendicular to both, meaning (Pa - Pb) dot (P2 - P1) = 0 AND (Pa - Pb) dot (P4 - P3) = 0.
+		val p1 = this.start
+		val p2 = this.end
+		val p3 = other.start
+		val p4 = other.end
+		val p13 = p1 - p3
+		val p43 = p4 - p3
+		val p21 = p2 - p1
+
+		if(p43.squaredMagnitude < epsilon || p21.squaredMagnitude < epsilon) {
+			return null
+		}
+
+		val d1343 = p13.dot(p43)
+		val d4321 = p43.dot(p21)
+		val d1321 = p13.dot(p21)
+		val d4343 = p43.dot(p43)
+		val d2121 = p21.dot(p21)
+
+		val denominator = d2121*d4343 - d4321*d4321
+		if(denominator < epsilon) {
+			return null
+		}
+
+		val numerator = d1343 * d4321 - d1321 * d4343
+		val m = numerator/denominator
+		val n = (d1343 + (d4321 * m)) / d4343
+
+		val pa = p1 + (p21*m)
+		val pb = p3 + (p43*n)
+
+		return Line(pa, pb)
+	}
+
 	fun pointOnLine(pt:Vec, epsilon:Float = 1e-6f):Boolean {
 		// Is this point a solution to this line?
 		if(epsilon == 0f) {
@@ -207,6 +258,42 @@ class AABB(val x:Float, val y:Float, val w:Float, val h:Float) {
 }
 
 class Triangle(val a:Vec, val b:Vec, val c:Vec) {
+	fun intersection(line:Line, lineSegment:Boolean=False, planeIntersection:Boolean=False, epsilon:Float=1e-6f): Vec? {
+		/*
+		If the line doesn't intersect the triangle, returns null.
+		If planeIntersection is true, will return where the line intersects the plane instead of just the triangle.
+		If lineSegment is true, will return where the line intersects the plane or, if the point is not on the line, returns null.
+		Let N be the normal of the triangle as determined by the ab (cross) ac.
+		If then a point Q on the plane satisfies the equation N dot (Q-a) = 0. (?)
+		Substitute: N dot (P1 + u(P2-P1)) = N dot P3
+		u = N dot (a - P1) / N dot (P2 - P1)
+		*/
+		val normal = (b-a).cross((c-a))
+		val numerator = normal.dot(a - line.start)
+		val denominator = normal.dot(line.end - line.start)
+
+		if(denominator < epsilon) {
+			return null
+		}
+
+		u = numerator / denominator
+		if(lineSegment && (u < 0.0f || u > 1.0f)) {
+			return null // There is an intersection, but it's not on the line.
+		}
+
+		// Get the point.
+		val p = line.start + (line.end-line.start)*u
+
+		// If we care only about the plane, can return here.
+		if(planeIntersection) {
+			return p
+		}
+
+		// Check to see if the point is inside the triangle.
+		
+		
+	}
+
 	fun pointInTriangle2D(p:Vec):Boolean {
 		/*
 		// Any point p where [B-A] cross [p-A] does not point in the same direction as [B-A] cross [C-A] isn't inside the triangle.
