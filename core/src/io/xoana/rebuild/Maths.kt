@@ -1,7 +1,7 @@
 package io.xoana.rebuild
 
-//import com.badlogic.gdx.math.Vector2
-//import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.math.Vector3
 
 /**
  * Created by Jo on 2017-07-09.
@@ -9,8 +9,8 @@ package io.xoana.rebuild
 class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 
 	// libGDX Interop section.
-	//constructor(v2: Vector2): this( v2.x, v2.y, 0f, 0f)
-	//constructor(v3: Vector3):this(v3.x, v3.y, v3.z, 0f)
+	constructor(v2: Vector2):this(v2.x, v2.y, 0f, 0f)
+	constructor(v3: Vector3):this(v3.x, v3.y, v3.z, 0f)
 
 	fun toGDXVector2(): Vector2 = Vector2(this.x, this.y)
 	fun toGDXVector3(): Vector3 = Vector3(this.x, this.y, this.z)
@@ -57,9 +57,9 @@ class Vec(var x:Float=0f, var y:Float=0f, var z:Float=0f, var w:Float=0f) {
 
 	fun cross3(other:Vec):Vec {
 		return Vec(
-			this.y*other.z - this.z*other.y, 
-			this.x*other.z - this.z*other.x,
-			this.x*other.y - this.y*other.x
+				this.y*other.z - this.z*other.y,
+				this.x*other.z - this.z*other.x,
+				this.x*other.y - this.y*other.x
 		)
 		// (2,3,4) (x) (5,6,7) -> (-3, 6, -3)
 	}
@@ -111,8 +111,8 @@ class Line(val start:Vec, val end:Vec) {
 		}
 
 		val candidatePoint = Vec(
-			((start.x*end.y - start.y*end.x)*(other.start.x-other.end.x))-((start.x-end.x)*(other.start.x*other.end.y - other.start.y*other.end.x)),
-			((start.x*end.y - start.y*end.x)*(other.start.y-other.end.y))-((start.y-end.y)*(other.start.x*other.end.y - other.start.y*other.end.x))
+				((start.x*end.y - start.y*end.x)*(other.start.x-other.end.x))-((start.x-end.x)*(other.start.x*other.end.y - other.start.y*other.end.x)),
+				((start.x*end.y - start.y*end.x)*(other.start.y-other.end.y))-((start.y-end.y)*(other.start.x*other.end.y - other.start.y*other.end.x))
 		)/determinant
 
 		// If the lines are infinite, we're done.  No more work.
@@ -138,7 +138,7 @@ class Line(val start:Vec, val end:Vec) {
 		return a + r*t
 	}
 
-	fun shortestConnectingSegment(other:Line, epsilon:Float=1e-6): Line? {
+	fun shortestConnectingSegment(other:Line, epsilon:Float=1e-6f): Line? {
 		// Returns the smallest line segment between two lines in N-dimensional space.
 		// This can be thought of as 'intersection' in some sense if len < epsilon.
 		// Ported from Paul Bourke's algorithm.
@@ -258,7 +258,7 @@ class AABB(val x:Float, val y:Float, val w:Float, val h:Float) {
 }
 
 class Triangle(val a:Vec, val b:Vec, val c:Vec) {
-	fun intersection(line:Line, lineSegment:Boolean=False, planeIntersection:Boolean=False, epsilon:Float=1e-6f): Vec? {
+	fun intersection(line:Line, lineSegment:Boolean=false, planeIntersection:Boolean=false, epsilon:Float=1e-6f): Vec? {
 		/*
 		If the line doesn't intersect the triangle, returns null.
 		If planeIntersection is true, will return where the line intersects the plane instead of just the triangle.
@@ -268,7 +268,9 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 		Substitute: N dot (P1 + u(P2-P1)) = N dot P3
 		u = N dot (a - P1) / N dot (P2 - P1)
 		*/
-		val normal = (b-a).cross((c-a))
+		val r = b-a
+		val s = c-a
+		val normal = r.cross3(s)
 		val numerator = normal.dot(a - line.start)
 		val denominator = normal.dot(line.end - line.start)
 
@@ -276,13 +278,13 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 			return null
 		}
 
-		u = numerator / denominator
-		if(lineSegment && (u < 0.0f || u > 1.0f)) {
+		val t = numerator / denominator
+		if(lineSegment && (t < 0.0f || t > 1.0f)) {
 			return null // There is an intersection, but it's not on the line.
 		}
 
 		// Get the point.
-		val p = line.start + (line.end-line.start)*u
+		val p = line.start + (line.end-line.start)*t
 
 		// If we care only about the plane, can return here.
 		if(planeIntersection) {
@@ -290,8 +292,35 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 		}
 
 		// Check to see if the point is inside the triangle.
-		
-		
+		val alpha = r.dot(r)
+		val beta = r.dot(s)
+		val gamma = s.dot(s)
+
+		val invDeterminant = alpha*beta - gamma*beta
+		if(invDeterminant < epsilon) {
+			return null
+		}
+		val determinant = 1.0f / invDeterminant
+		// 2x3 matrix.
+		/*
+		val m00 = r.x*beta + s.x*-beta
+		val m01 = r.y*beta + s.y*-beta
+		val m02 = r.z*beta + s.z*-beta
+		val m10 = r.x*-gamma + s.x*alpha
+		val m11 = r.y*-gamma + s.y*alpha
+		val m12 = r.z*-gamma + s.z*alpha
+		*/
+		val mRow0 = r*beta + s*-beta // x, y, z
+		val mRow1 = r*-gamma + s*alpha
+
+		val u = mRow0.dot(p)
+		val v = mRow1.dot(p)
+
+		if(u >= 0 && v >= 0 && u <= 1 && v <= 1 && u+v <= 1) {
+			return p
+		} else {
+			return null
+		}
 	}
 
 	fun pointInTriangle2D(p:Vec):Boolean {
