@@ -274,7 +274,7 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 		val numerator = normal.dot(a - line.start)
 		val denominator = normal.dot(line.end - line.start)
 
-		if(denominator < epsilon) {
+		if(Math.abs(denominator) < epsilon) {
 			return null
 		}
 
@@ -292,29 +292,27 @@ class Triangle(val a:Vec, val b:Vec, val c:Vec) {
 		}
 
 		// Check to see if the point is inside the triangle.
-		val alpha = r.dot(r)
-		val beta = r.dot(s)
-		val gamma = s.dot(s)
+		var alpha = r.dot(r)
+		var beta = r.dot(s)
+		var gamma = beta
+		var delta = s.dot(s)
 
-		val invDeterminant = alpha*beta - gamma*beta
-		if(invDeterminant < epsilon) {
+		val invDeterminant = alpha*delta - gamma*beta
+		if(Math.abs(invDeterminant) < epsilon) {
 			return null
 		}
 		val determinant = 1.0f / invDeterminant
-		// 2x3 matrix.
-		/*
-		val m00 = r.x*beta + s.x*-beta
-		val m01 = r.y*beta + s.y*-beta
-		val m02 = r.z*beta + s.z*-beta
-		val m10 = r.x*-gamma + s.x*alpha
-		val m11 = r.y*-gamma + s.y*alpha
-		val m12 = r.z*-gamma + s.z*alpha
-		*/
-		val mRow0 = r*beta + s*-beta // x, y, z
-		val mRow1 = r*-gamma + s*alpha
+		alpha *= determinant
+		beta *= determinant
+		gamma *= determinant
+		delta *= determinant
 
-		val u = mRow0.dot(p)
-		val v = mRow1.dot(p)
+		// 2x3 matrix.
+		val mRow0 = (r * delta) + (s * -beta)
+		val mRow1 = (r * -gamma) + (s * alpha)
+
+		val u = mRow0.dot(p - a)
+		val v = mRow1.dot(p - a)
 
 		if(u >= 0 && v >= 0 && u <= 1 && v <= 1 && u+v <= 1) {
 			return p
