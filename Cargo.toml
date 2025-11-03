@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-macroquad = "0.4.14"
+notan = "0.13.0"
+glam = "0.30.9"
