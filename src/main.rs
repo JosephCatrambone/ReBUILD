@@ -6,6 +6,11 @@ mod camera;
 use glam::{Vec2, I64Vec2};
 use notan::draw::*;
 use notan::prelude::*;
+use crate::camera::Camera2D;
+
+const NEIGHBORLESS_COLOR: Color = Color::WHITE;
+const NEIGHBORED_COLOR: Color = Color::PINK;
+const GRID_COLOR: Color = Color::GRAY;
 
 #[derive(AppState)]
 struct State {
@@ -16,9 +21,11 @@ struct State {
 
 	// 2D Rendering:
 	font: Font,
+	camera2d: Camera2D,
 
 	// Internal Representation:
 	prev_mouse: Vec2,
+	mouse_press_started: Option<Vec2>,
 	render_3d: bool,
 	tool: Option<Box<dyn tools::Tool>>,
 	map: level::Level,
@@ -28,6 +35,7 @@ struct State {
 fn main() -> Result<(), String> {
 	notan::init_with(setup)
 		.add_config(DrawConfig)
+		.event(event)
 		.update(update)
 		.draw(draw)
 		.build()
@@ -41,7 +49,7 @@ fn setup(gfx: &mut Graphics) -> State {
 	let clear_options = ClearOptions::color(Color::new(0.1, 0.2, 0.3, 1.0));
 
 	let vertex_info = VertexInfo::new()
-		.attr(0, VertexFormat::Float32x2)
+		.attr(0, VertexFormat::Float32x3)
 		.attr(1, VertexFormat::Float32x3);
 
 	let pipeline = gfx
@@ -53,9 +61,9 @@ fn setup(gfx: &mut Graphics) -> State {
 
 	#[rustfmt::skip]
     let vertices = [
-        0.5, 1.0,   1.0, 0.2, 0.3,
-        0.0, 0.0,   0.1, 1.0, 0.3,
-        1.0, 0.0,   0.1, 0.2, 1.0,
+        0.5, 1.0, 0.0,   1.0, 0.2, 0.3,
+        0.0, 0.0, 0.0,   0.1, 1.0, 0.3,
+        1.0, 0.0, 0.0,   0.1, 0.2, 1.0,
     ];
 
 	let vbo = gfx
@@ -65,33 +73,100 @@ fn setup(gfx: &mut Graphics) -> State {
 		.build()
 		.unwrap();
 
+	let mut camera = Camera2D::default();
+	camera.scale = 1.0;
+	camera.snap_level = 16;
 
 	State {
 		clear_options: clear_options,
 		vbo: vbo,
 		pipeline: pipeline,
+
 		font: font,
+		camera2d: camera, // We're not using draw.transform().push(container.matrix()) here.
+
 		render_3d: false,
 		prev_mouse: Vec2::ZERO,
+		mouse_press_started: None,
 		tool: None,
 		map: level::Level::new(),
 	}
 }
 
+fn event(state: &mut State, event: Event) {
+	match event {
+		Event::ReceivedCharacter(c) if c != '\u{7f}' => {
+			//state.msg.push(c);
+		},
+		Event::MouseMove { .. } => {
+		},
+		Event::MouseDown { button, .. } => {
+		},
+		Event::MouseUp { button, .. } => {
+		},
+		Event::MouseEnter { .. } => {
+		},
+		Event::MouseLeft { .. } => {
+		},
+		Event::MouseWheel { .. } => {
+		},
+		_ => {}
+	}
+}
+
 fn update(app: &mut App, state: &mut State) {
-	// get mouse cursor position here
-	let (x, y) = app.mouse.position();
+	if state.render_3d {
+
+	} else {
+		update2d(app, state);
+	}
+}
+
+fn update2d(app: &mut App, state: &mut State) {
+	// Mouse Inputs
+	let (mouse_x, mouse_y) = app.mouse.position();
+	let (mouse_dx, mouse_dy) = app.mouse.motion_delta;
 
 	if app.mouse.was_pressed(MouseButton::Left) {
 		//state.left.push((x, y));
 	}
+	if app.mouse.middle_is_down() { // was_pressed(MouseButton::Middle)? is_down(Middle)?
+		state.camera2d.offset.x -= mouse_dx as f32*state.camera2d.scale;
+		state.camera2d.offset.y -= mouse_dy as f32*state.camera2d.scale;
+	}
 
+	if app.mouse.is_scrolling() {
+		let delta_x = app.mouse.wheel_delta.x;
+		let delta_y = app.mouse.wheel_delta.y;
+		if delta_y > 0f32 {
+			state.camera2d.scale *= 1.25;
+		} else {
+			state.camera2d.scale *= 0.75;
+		}
+		state.camera2d.scale = state.camera2d.scale.max(1.0 / 2048f32);
+
+		//state.x = (state.x + delta_x).max(0.0).min(800.0);
+		//state.y = (state.y + delta_y).max(0.0).min(600.0);
+	}
+
+	// Keyboard Inputs:
 	if app.keyboard.was_released(KeyCode::R) {
 		state.render_3d = !state.render_3d;
 	}
+	if app.keyboard.was_released(KeyCode::Key0) {
+		state.camera2d.offset = Vec2::ZERO;
+		state.camera2d.scale = 1.0;
+	}
 
-	state.prev_mouse.x = x;
-	state.prev_mouse.y = y;
+	// Closing and cleanup:
+	state.prev_mouse.x = mouse_x;
+	state.prev_mouse.y = mouse_y;
+}
+
+fn update3d(app: &mut App, state: &mut State) {
+	if app.keyboard.was_released(KeyCode::R) {
+		state.render_3d = !state.render_3d;
+	}
 }
 
 fn draw(gfx: &mut Graphics, state: &mut State) {
@@ -103,11 +178,24 @@ fn draw(gfx: &mut Graphics, state: &mut State) {
 }
 
 fn draw2d(gfx: &mut Graphics, state: &mut State) {
-	let mut draw = gfx.create_draw();
-	draw.clear(Color::BLACK);
+	let mut ctx = gfx.create_draw();
+	ctx.clear(Color::BLACK);
+
+	// Draw an invisible rect so we can get the position in local space.
+	{
+		//let mut rect = ctx.rect((0.0, 0.0), (gfx.size().0 as f32, gfx.size().1 as f32));
+		//let local = rect.screen_to_local_position(state.mouse.x, app.mouse.y);
+	}
+
+	// Draw the grid.
+	let (screen_width, screen_height) = gfx.size();
+	for y in (0i64..screen_height as i64).step_by(state.camera2d.snap_level as usize) {
+		let dy = (state.camera2d.offset.y as i64) % state.camera2d.snap_level as i64;
+		ctx.line((0f32, (y + dy) as f32), (screen_width as f32, (y + dy) as f32)).color(GRID_COLOR);
+	}
 
 	// Draw cursor
-	draw.circle(8.0)
+	ctx.circle(8.0)
 		.position(state.prev_mouse.x, state.prev_mouse.y)
 		.color(Color::ORANGE);
 
@@ -119,18 +207,24 @@ fn draw2d(gfx: &mut Graphics, state: &mut State) {
 	// Draw Grid
 	// Draw Level
 	for sector in &state.map.sectors {
-
+		for wall_idx in 0..sector.walls.len() {
+			let wall_a = &sector.walls[wall_idx];
+			let wall_b = &sector.walls[(wall_idx + 1) % sector.walls.len()];
+			let p1 = state.camera2d.local_to_screen(state.map.vertices[wall_a.vertex]);
+			let p2 = state.camera2d.local_to_screen(state.map.vertices[wall_b.vertex]);
+			ctx.line(p1, p2).color(if wall_a.neighbor.is_none() { NEIGHBORLESS_COLOR } else { NEIGHBORED_COLOR });
+		}
 	}
 
 	// Draw position
 	let text = format!("x: {} - y: {}", state.prev_mouse.x, state.prev_mouse.y);
-	draw.text(&state.font, &text)
+	ctx.text(&state.font, &text)
 		.position(10.0, 10.0)
 		.size(16.0)
 		.h_align_left()
 		.v_align_middle();
 
-	gfx.render(&draw);
+	gfx.render(&ctx);
 }
 
 fn draw3d(gfx: &mut Graphics, state: &mut State) {
@@ -175,3 +269,37 @@ const FRAG: ShaderSource = notan::fragment_shader! {
     }
     "#
 };
+
+/*
+fn draw(gfx: &mut Graphics, state: &mut State) {
+    // update the data that will be sent to the gpu
+    update_bytes(state);
+
+    // Update the texture with the new data
+    gfx.update_texture(&mut state.texture)
+        .with_data(&state.bytes)
+        .update()
+        .unwrap();
+
+    // Draw the texture using the draw 2d API for convenience
+    let mut draw = gfx.create_draw();
+    draw.clear(Color::BLACK);
+    draw.image(&state.texture);
+    gfx.render(&draw);
+}
+
+fn update_bytes(state: &mut State) {
+    for _ in 0..100 {
+        let index = state.count * 4;
+        state.bytes[index..index + 4].copy_from_slice(&state.color.rgba_u8());
+        state.count += 9;
+
+        let len = state.bytes.len() / 4;
+        if state.count >= len {
+            state.count -= len;
+            state.step = (state.step + 1) % COLORS.len();
+            state.color = COLORS[state.step];
+        }
+    }
+}
+ */
