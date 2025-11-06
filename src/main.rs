@@ -207,7 +207,11 @@ fn draw2d(gfx: &mut Graphics, state: &mut State) {
 
 	// Draw Grid
 	// Draw Level
-	
+	for (start, end) in state.map.get_wall_point_pair_iterator() {
+		let a = state.camera2d.world_to_screen(start);
+		let b = state.camera2d.world_to_screen(end);
+		ctx.line(a, b).color(NEIGHBORLESS_COLOR);
+	}
 
 	// Draw position
 	let text = format!("x: {} - y: {}", state.prev_mouse.x, state.prev_mouse.y);
