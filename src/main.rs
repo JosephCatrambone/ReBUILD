@@ -73,8 +73,7 @@ fn setup(gfx: &mut Graphics) -> State {
 		.build()
 		.unwrap();
 
-	let mut camera = Camera2D::default();
-	camera.scale = 1.0;
+	let mut camera = Camera2D::new(gfx.size().0 as f32, gfx.size().1 as f32);
 	camera.snap_level = 16;
 
 	State {
@@ -131,19 +130,20 @@ fn update2d(app: &mut App, state: &mut State) {
 		//state.left.push((x, y));
 	}
 	if app.mouse.middle_is_down() { // was_pressed(MouseButton::Middle)? is_down(Middle)?
-		state.camera2d.offset.x -= mouse_dx as f32*state.camera2d.scale;
-		state.camera2d.offset.y -= mouse_dy as f32*state.camera2d.scale;
+		state.camera2d.move_camera(mouse_dx as f32, mouse_dy as f32);
 	}
 
 	if app.mouse.is_scrolling() {
 		let delta_x = app.mouse.wheel_delta.x;
 		let delta_y = app.mouse.wheel_delta.y;
+		/*
 		if delta_y > 0f32 {
 			state.camera2d.scale *= 1.25;
 		} else {
 			state.camera2d.scale *= 0.75;
 		}
 		state.camera2d.scale = state.camera2d.scale.max(1.0 / 2048f32);
+		*/
 
 		//state.x = (state.x + delta_x).max(0.0).min(800.0);
 		//state.y = (state.y + delta_y).max(0.0).min(600.0);
@@ -154,8 +154,7 @@ fn update2d(app: &mut App, state: &mut State) {
 		state.render_3d = !state.render_3d;
 	}
 	if app.keyboard.was_released(KeyCode::Key0) {
-		state.camera2d.offset = Vec2::ZERO;
-		state.camera2d.scale = 1.0;
+		state.camera2d.reset();
 	}
 
 	// Closing and cleanup:
@@ -188,11 +187,13 @@ fn draw2d(gfx: &mut Graphics, state: &mut State) {
 	}
 
 	// Draw the grid.
+	/*
 	let (screen_width, screen_height) = gfx.size();
 	for y in (0i64..screen_height as i64).step_by(state.camera2d.snap_level as usize) {
-		let dy = (state.camera2d.offset.y as i64) % state.camera2d.snap_level as i64;
+		let dy = (state.camera2d.center.y as i64) % state.camera2d.snap_level as i64;
 		ctx.line((0f32, (y + dy) as f32), (screen_width as f32, (y + dy) as f32)).color(GRID_COLOR);
 	}
+	*/
 
 	// Draw cursor
 	ctx.circle(8.0)
@@ -206,15 +207,7 @@ fn draw2d(gfx: &mut Graphics, state: &mut State) {
 
 	// Draw Grid
 	// Draw Level
-	for sector in &state.map.sectors {
-		for wall_idx in 0..sector.walls.len() {
-			let wall_a = &sector.walls[wall_idx];
-			let wall_b = &sector.walls[(wall_idx + 1) % sector.walls.len()];
-			let p1 = state.camera2d.local_to_screen(state.map.vertices[wall_a.vertex]);
-			let p2 = state.camera2d.local_to_screen(state.map.vertices[wall_b.vertex]);
-			ctx.line(p1, p2).color(if wall_a.neighbor.is_none() { NEIGHBORLESS_COLOR } else { NEIGHBORED_COLOR });
-		}
-	}
+	
 
 	// Draw position
 	let text = format!("x: {} - y: {}", state.prev_mouse.x, state.prev_mouse.y);

@@ -1,26 +1,34 @@
-
 use glam::I64Vec2;
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Level {
-	pub sectors: Vec<Sector>,
-	pub vertices: Vec<I64Vec2>,
+	sectors: Vec<Sector>,
+	walls: Vec<Wall>,
+	corners: Vec<Corner>,
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Sector {
-	pub walls: Vec<Wall>,
-	pub floor_material: Option<Material>,
-	pub ceiling_material: Option<Material>,
-	pub ceiling_height: i64,
-	pub floor_height: i64,
+pub struct Corner {
+	vertex: I64Vec2,
+	walls: Vec<usize>, // Weak ref
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Wall {
-	pub vertex: usize,
+	start_vertex: usize,
+	end_vertex: usize,
 	pub material: Option<Material>,
 	pub neighbor: Option<usize>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Sector {
+	corners: Vec<usize>,
+	walls: Vec<usize>,
+	floor_material: Option<Material>,
+	ceiling_material: Option<Material>,
+	ceiling_height: i64,
+	floor_height: i64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -35,37 +43,47 @@ impl Level {
 	pub fn new() -> Self {
 		let mut level = Self::default();
 
-		// 123
-		// 054
-
-		level.vertices.extend([
-			I64Vec2 { x: 0, y: 0 },  // 0
-			I64Vec2 { x: 0, y: 64 },  // 1
-			I64Vec2 { x: 64, y: 64 },  // 2
-			I64Vec2 { x: 128, y: 64 },  // 3
-			I64Vec2 { x: 128, y: 0 },  // 4
-			I64Vec2 { x: 64, y: 0 },  // 5
-		]);
-
-		let mut sector_a = Sector::default();
-		sector_a.walls.extend([
-			Wall { vertex: 0, neighbor: None, material: None, },
-			Wall { vertex: 1, neighbor: None, material: None, },
-			Wall { vertex: 2, neighbor: None, material: None, },
-			Wall { vertex: 5, neighbor: Some(1), material: None, },
-		]);
-
-		let mut sector_b = Sector::default();
-		sector_b.walls.extend([
-			Wall { vertex: 2, neighbor: None, material: None, },
-			Wall { vertex: 3, neighbor: None, material: None, },
-			Wall { vertex: 4, neighbor: None, material: None, },
-			Wall { vertex: 5, neighbor: Some(0), material: None, },
-		]);
-
-		level.sectors.push(sector_a);
-		level.sectors.push(sector_b);
+		// TODO: Some mods here.
 
 		level
 	}
+
+	pub fn point_exists(&self, p: &I64Vec2) -> bool {
+		for c in &self.corners {
+			if &c.vertex == p {
+				return true;
+			}
+		}
+		false
+	}
+
+	pub fn corner_exists(&self, c: &Corner) -> bool {
+		self.point_exists(&c.vertex)
+	}
+
+	pub fn add_sector(&mut self, sector: Sector) {}
+
+	pub fn add_sector_partial(&mut self, sector: Sector) {}
+
+	// TODO: Make this into an iterator.
+
 }
+
+/*
+pub struct LevelWallIterator<'a> {
+	level_ref: &'a Level,
+	wall_idx: usize,
+	pub start_corner: &'a Corner,
+	pub end_corner: &'a Corner,
+	pub neighbor: Option<usize>,
+}
+
+impl<'a> Iterator for LevelWallIterator<'a> {
+	type Item = LevelWallIterator<'a>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		todo!()
+	}
+}
+*/
+
