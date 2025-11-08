@@ -213,6 +213,11 @@ fn draw2d(gfx: &mut Graphics, state: &mut State) {
 		ctx.line(a, b).color(NEIGHBORLESS_COLOR);
 	}
 
+	// Draw active tool.
+	if let Some(active_tool) = state.tool.as_ref() {
+		active_tool.draw(&mut ctx);
+	}
+
 	// Draw position
 	let text = format!("x: {} - y: {}", state.prev_mouse.x, state.prev_mouse.y);
 	ctx.text(&state.font, &text)
